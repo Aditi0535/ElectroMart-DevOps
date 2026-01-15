@@ -3,7 +3,7 @@ name: ElectroMart Production Pipeline
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch: # Allows you to click "Run" manually in GitHub UI
+  workflow_dispatch:
 
 env:
   AWS_REGION: ap-south-1
@@ -13,7 +13,7 @@ env:
 
 jobs:
   # ==================================================================
-  # JOB 1: SECURITY SCAN (DevSecOps)
+  # JOB 1: SECURITY SCAN
   # ==================================================================
   security-scan:
     name: 🛡️ Security Scan
@@ -28,7 +28,7 @@ jobs:
           scan-type: 'config'
           scan-ref: 'terraform'
           severity: 'HIGH,CRITICAL'
-          exit-code: '0' # Don't break build, just report
+          exit-code: '0'
 
   # ==================================================================
   # JOB 2: BUILD & PUSH DOCKER IMAGES
@@ -73,6 +73,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      # --- MISSING STEP ADDED HERE ---
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      # -------------------------------
+
       - name: Install Ansible
         run: |
           sudo apt update
@@ -81,15 +90,11 @@ jobs:
       - name: Setup SSH Key
         run: |
           cd ansible
-          # Create the .pem file from the GitHub Secret
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > home-app.pem
           chmod 600 home-app.pem
 
       - name: Run Ansible Deploy
         run: |
           cd ansible
-          # Disable Host Key Checking to prevent "Are you sure?" prompt
           export ANSIBLE_HOST_KEY_CHECKING=False
-          
-          # Run the Playbook (Uses inventory.ini from the repo)
           ansible-playbook -i inventory.ini deploy_app.yaml
