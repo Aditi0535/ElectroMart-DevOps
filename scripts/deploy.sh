@@ -101,12 +101,39 @@ echo -e "${GREEN}✅ Images pushed to ECR!${NC}"
 # ====================================================
 echo -e "\n${BLUE}⚙️  [4/4] Configuring Servers & Deploying App...${NC}"
 
-# Wait for instances to initialize (The "Coffee Break")
-echo -e "${YELLOW}⏳ Waiting 60s for new servers to initialize SSH...${NC}"
-sleep 60
-
 cd $ANSIBLE_DIR
 
+# ------------------------------------------------------------------
+# SMART WAIT: Check for SSH connectivity before running playbooks
+# ------------------------------------------------------------------
+echo -e "${YELLOW}⏳ Waiting for all servers to become reachable via SSH...${NC}"
+echo "   (This may take 1-2 minutes while servers initialize)"
+
+RETRIES=30
+DELAY=10
+SUCCESS=false
+
+for ((i=1; i<=RETRIES; i++)); do
+    # Try to ping all hosts defined in inventory
+    if ansible -i inventory.ini all -m ping > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ All servers are online and reachable!${NC}"
+        SUCCESS=true
+        break
+    else
+        echo "   ... Waiting for SSH connection (Attempt $i/$RETRIES)"
+        sleep $DELAY
+    fi
+done
+
+if [ "$SUCCESS" = false ]; then
+    echo -e "${RED}❌ Timeout: Servers did not become reachable in time.${NC}"
+    echo "   Please check your Security Groups or SSH Key configuration."
+    exit 1
+fi
+
+# ------------------------------------------------------------------
+# Run Playbooks (Now guaranteed to connect)
+# ------------------------------------------------------------------
 echo "   -> Installing Docker..."
 ansible-playbook -i inventory.ini install_docker.yaml
 
