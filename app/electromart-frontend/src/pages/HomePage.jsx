@@ -34,7 +34,7 @@ const HomePage = () => {
         }}
       >
         <Typography variant="h2" component="h1" fontWeight="bold" gutterBottom>
-          Home Appliance ElectroShop
+          Home Appliance ElectroMart
         </Typography>
         <Typography variant="h5" sx={{ mb: 5 }}>
           

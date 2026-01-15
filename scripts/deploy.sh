@@ -68,7 +68,7 @@ ansible_ssh_private_key_file=./home-app.pem
 ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 
 [private:vars]
-ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand="ssh -W %h:%p -q ubuntu@${BASTION_IP} -i ./home-app.pem"'
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand="ssh -o StrictHostKeyChecking=no -W %h:%p -q ubuntu@${BASTION_IP} -i ./home-app.pem"'
 EOF
 
 echo -e "${GREEN}✅ Inventory updated successfully!${NC}"
@@ -142,6 +142,23 @@ ansible-playbook -i inventory.ini deploy_app.yaml
 
 echo "   -> Deploying Monitoring Stack..."
 ansible-playbook -i inventory.ini deploy_monitoring.yaml
+
+# ====================================================
+# PHASE 5: SYNC TO GITHUB (Trigger CI/CD)
+# ====================================================
+echo -e "\n${BLUE}🔄 [5/5] Syncing Inventory to GitHub...${NC}"
+
+cd $PROJECT_ROOT
+git add ansible/inventory.ini terraform/terraform.tfvars
+
+# Check if there are changes to commit
+if git diff-index --quiet HEAD --; then
+    echo "   No changes to inventory. Skipping push."
+else
+    git commit -m "Auto-deploy: Updated Infra IPs & Config"
+    git push origin main
+    echo -e "${GREEN}✅ Inventory pushed to GitHub. CI/CD pipeline triggered!${NC}"
+fi
 
 # ====================================================
 # SUMMARY
