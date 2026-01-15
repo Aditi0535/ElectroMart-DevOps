@@ -1,0 +1,12 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    # CRITICAL: This UID must match what is inside your Dashboard JSON
+    uid: my-prometheus-datasource
+    access: proxy
+    # In AWS, we use the internal Docker network or Private IP
+    url: http://{{ bastion_ip }}:9090
+    isDefault: true
+    editable: false # Production Best Practice: Prevent manual edits in UI

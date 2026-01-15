@@ -1,0 +1,30 @@
+# Node modules
+node_modules/
+
+# Git
+.git
+.gitignore
+
+# Logs
+logs/
+*.log
+
+# Env files
+.env
+.env.*
+
+# Build outputs
+dist/
+build/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# IDE configs
+.vscode/
+.idea/
+
+# Cache
+.cache/
+temp/

@@ -1,0 +1,111 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 14,
+      "panels": [],
+      "title": "🚦 UPTIME & PERFORMANCE (Is it Up? Is it Fast?)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "my-prometheus-datasource" },
+      "description": "Green = Service is responding. Red = Service is DOWN.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "mappings": [ { "options": { "0": { "color": "red", "index": 0, "text": "DOWN" }, "1": { "color": "green", "index": 1, "text": "UP" } }, "type": "value" } ], "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }, "unit": "none" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 1 },
+      "id": 16,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "horizontal", "reduceOptions": { "calcs": [ "lastNotNull" ], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "my-prometheus-datasource" }, "editorMode": "code", "expr": "probe_success", "legendFormat": "{{instance}}", "range": true, "refId": "A" } ],
+      "title": "Service Availability",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "my-prometheus-datasource" },
+      "description": "How long it takes for the server to reply. Lower is better.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "gradientMode": "opacity", "lineWidth": 2, "spanNulls": false }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }, "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 16, "x": 8, "y": 1 },
+      "id": 20,
+      "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "my-prometheus-datasource" }, "editorMode": "code", "expr": "probe_duration_seconds", "legendFormat": "{{instance}}", "range": true, "refId": "A" } ],
+      "title": "Response Latency (Speed)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+      "id": 10,
+      "panels": [],
+      "title": "📡 NETWORK & TRAFFIC",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "my-prometheus-datasource" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "Bytes/sec", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "gradientMode": "opacity", "lineWidth": 2, "spanNulls": false }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "binBps" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "id": 2,
+      "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "my-prometheus-datasource" }, "editorMode": "code", "expr": "rate(node_network_receive_bytes_total[1m])", "legendFormat": "⬇️ Download (Inbound)", "range": true, "refId": "A" },
+        { "datasource": { "type": "prometheus", "uid": "my-prometheus-datasource" }, "editorMode": "code", "expr": "rate(node_network_transmit_bytes_total[1m])", "legendFormat": "⬆️ Upload (Outbound)", "range": true, "refId": "B" }
+      ],
+      "title": "Network Bandwidth Usage",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "id": 12,
+      "panels": [],
+      "title": "🏥 SERVER HEALTH (Resources)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "my-prometheus-datasource" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 80 } ] }, "unit": "percent" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 17 },
+      "id": 4,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": [ "lastNotNull" ], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "my-prometheus-datasource" }, "editorMode": "code", "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[1m])) * 100)", "legendFormat": "CPU Load", "range": true, "refId": "A" } ],
+      "title": "CPU Load",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "my-prometheus-datasource" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "lineWidth": 1, "spanNulls": false }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }, "unit": "bytes" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 17 },
+      "id": 8,
+      "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "my-prometheus-datasource" }, "editorMode": "code", "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes", "legendFormat": "RAM Used", "range": true, "refId": "A" } ],
+      "title": "Memory Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "my-prometheus-datasource" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "Percent", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "lineWidth": 2, "spanNulls": false }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }, "unit": "percent" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 17 },
+      "id": 6,
+      "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [ { "datasource": { "type": "prometheus", "uid": "my-prometheus-datasource" }, "editorMode": "code", "expr": "100 - ((node_filesystem_avail_bytes{mountpoint=~\"/|/host\"} * 100) / node_filesystem_size_bytes{mountpoint=~\"/|/host\"})", "legendFormat": "Disk Used", "range": true, "refId": "A" } ],
+      "title": "Hard Disk Space (%)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [],
+  "templating": { "list": [] },
+  "time": { "from": "now-5m", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "ElectroMart Production Dashboard",
+  "uid": "electromart-prod",
+  "version": 1,
+  "weekStart": ""
+}

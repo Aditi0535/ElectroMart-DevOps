@@ -1,0 +1,95 @@
+name: ElectroMart Production Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: # Allows you to click "Run" manually in GitHub UI
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REGISTRY: 836397457654.dkr.ecr.ap-south-1.amazonaws.com
+  ECR_BACKEND: home-app-backend
+  ECR_FRONTEND: home-app-frontend
+
+jobs:
+  # ==================================================================
+  # JOB 1: SECURITY SCAN (DevSecOps)
+  # ==================================================================
+  security-scan:
+    name: 🛡️ Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Run Trivy (IaC Scan)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: 'terraform'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '0' # Don't break build, just report
+
+  # ==================================================================
+  # JOB 2: BUILD & PUSH DOCKER IMAGES
+  # ==================================================================
+  build-and-push:
+    name: 🐳 Build & Push
+    needs: security-scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build & Push Backend
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_BACKEND:latest -f docker/backend.Dockerfile app/electromart-backend
+          docker push $ECR_REGISTRY/$ECR_BACKEND:latest
+
+      - name: Build & Push Frontend
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_FRONTEND:latest -f docker/frontend.Dockerfile app/electromart-frontend
+          docker push $ECR_REGISTRY/$ECR_FRONTEND:latest
+
+  # ==================================================================
+  # JOB 3: DEPLOY TO AWS (Ansible)
+  # ==================================================================
+  deploy:
+    name: 🚀 Deploy to Production
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Install Ansible
+        run: |
+          sudo apt update
+          sudo apt install -y ansible
+
+      - name: Setup SSH Key
+        run: |
+          cd ansible
+          # Create the .pem file from the GitHub Secret
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > home-app.pem
+          chmod 600 home-app.pem
+
+      - name: Run Ansible Deploy
+        run: |
+          cd ansible
+          # Disable Host Key Checking to prevent "Are you sure?" prompt
+          export ANSIBLE_HOST_KEY_CHECKING=False
+          
+          # Run the Playbook (Uses inventory.ini from the repo)
+          ansible-playbook -i inventory.ini deploy_app.yaml

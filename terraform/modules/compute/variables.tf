@@ -1,0 +1,9 @@
+variable "project_name" {}
+variable "key_name" {}
+variable "public_subnet_id" {}
+variable "private_subnet_id" {}
+variable "bastion_sg_id" {}
+variable "web_sg_id" {}
+variable "backend_sg_id" {}
+variable "db_sg_id" {}
+variable "iam_instance_profile" {}

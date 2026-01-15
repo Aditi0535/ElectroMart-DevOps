@@ -1,0 +1,14 @@
+# hadolint.yaml
+failure-threshold: info
+
+# Ignore specific rules that are too strict for this project
+ignored:
+  - DL3008 # Ignore "Pin versions in apt-get install" (e.g., install=1.2.0)
+  - DL3018 # Ignore "Pin versions in apk add"
+  - DL3013 # Ignore "Pin versions in pip install"
+  - DL3007 # Allow "latest" tag (We use latest for simplicity here)
+
+# Only allow pulling images from Docker Hub and your specific ECR
+trustedRegistries:
+  - docker.io
+  - 836397457654.dkr.ecr.ap-south-1.amazonaws.com

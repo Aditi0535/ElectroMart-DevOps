@@ -1,0 +1,120 @@
+---
+# 1. PREPARATION: Get ECR Credentials
+# We login on your laptop first, then pass the token to the remote servers.
+# This avoids needing IAM roles configured on the EC2 instances.
+- name: Setup Docker Credentials
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Get ECR Login Password
+      command: aws ecr get-login-password --region ap-south-1
+      register: ecr_token
+
+- name: Authenticate Remote Servers
+  hosts: private
+  become: yes
+  vars:
+    registry: 836397457654.dkr.ecr.ap-south-1.amazonaws.com
+  tasks:
+    - name: Login to ECR
+      docker_login:
+        username: AWS
+        password: "{{ hostvars['localhost']['ecr_token'].stdout }}"
+        registry_url: "{{ registry }}"
+
+# 2. DATABASE LAYER
+- name: Deploy MongoDB
+  hosts: db
+  become: yes
+  tasks:
+    - name: Run MongoDB
+      docker_container:
+        name: mongodb
+        image: mongo:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "27017:27017"
+        volumes:
+          - mongo_data:/data/db
+
+# 3. BACKEND LAYER
+- name: Deploy Backend API
+  hosts: backend
+  become: yes
+  vars:
+    # Ansible dynamically grabs the DB Private IP
+    db_ip: "{{ groups['db'][0] }}"
+    registry: 836397457654.dkr.ecr.ap-south-1.amazonaws.com
+  tasks:
+    - name: Pull Backend Image
+      docker_image:
+        name: "{{ registry }}/home-app-backend:latest"
+        source: pull
+        force_source: yes
+
+    - name: Run Backend Container
+      docker_container:
+        name: home-app-backend
+        image: "{{ registry }}/home-app-backend:latest"
+        state: started
+        restart_policy: always
+        ports:
+          - "5000:5000"
+        env:
+          # Connection string using the Private DB IP
+          MONGO_URI: "mongodb://{{ db_ip }}:27017/electromart"
+          PORT: "5000"
+
+# 4. FRONTEND LAYER (WEB)
+- name: Deploy Frontend Web Server
+  hosts: frontend
+  become: yes
+  vars:
+    # Ansible dynamically grabs the Backend Private IP
+    backend_ip: "{{ groups['backend'][0] }}"
+    registry: 836397457654.dkr.ecr.ap-south-1.amazonaws.com
+  tasks:
+    - name: Pull Frontend Image
+      docker_image:
+        name: "{{ registry }}/home-app-frontend:latest"
+        source: pull
+        force_source: yes
+
+    # We inject a custom Nginx config to proxy API calls to the Backend
+    - name: Create Nginx Reverse Proxy Config
+      copy:
+        dest: /home/ubuntu/nginx.conf
+        content: |
+          server {
+              listen 80;
+              
+              # 1. Forward API calls to the Backend Server
+              location /api/ {
+                  proxy_pass http://{{ backend_ip }}:5000/;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host $host;
+                  proxy_cache_bypass $http_upgrade;
+              }
+
+              # 2. Serve the React Application
+              location / {
+                  root /usr/share/nginx/html;
+                  index index.html index.htm;
+                  try_files $uri $uri/ /index.html;
+              }
+          }
+
+    - name: Run Frontend Container
+      docker_container:
+        name: home-app-frontend
+        image: "{{ registry }}/home-app-frontend:latest"
+        state: started
+        restart_policy: always
+        ports:
+          - "80:80"
+        # Mount our custom config over the default one
+        volumes:
+          - /home/ubuntu/nginx.conf:/etc/nginx/conf.d/default.conf

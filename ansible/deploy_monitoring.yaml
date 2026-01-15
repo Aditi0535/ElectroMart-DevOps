@@ -1,0 +1,157 @@
+---
+# 1. INSTALL AGENTS (Node Exporter)
+- name: Deploy Node Exporter
+  hosts: all
+  become: yes
+  tasks:
+    - name: Start Node Exporter
+      docker_container:
+        name: node_exporter
+        image: prom/node-exporter:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "9100:9100"
+        volumes:
+          - /:/host:ro,rslave
+        command:
+          - '--path.rootfs=/host'
+
+# 2. CONFIGURE SERVER (Prometheus + Grafana + Blackbox)
+- name: Deploy Production Monitoring Stack
+  hosts: bastion
+  become: yes
+  vars:
+    # Ansible gathers these IPs automatically
+    frontend_ip: "{{ groups['frontend'][0] }}"
+    backend_ip: "{{ groups['backend'][0] }}"
+    db_ip: "{{ groups['db'][0] }}"
+    bastion_ip: "{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}"
+
+  tasks:
+    # --- SETUP DIRECTORIES ---
+    - name: Create Config Directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /home/ubuntu/grafana/provisioning/datasources
+        - /home/ubuntu/grafana/provisioning/dashboards
+        - /home/ubuntu/grafana/dashboards_json
+
+    # --- BLACKBOX EXPORTER CONFIG ---
+    - name: Create Blackbox Config
+      copy:
+        dest: /home/ubuntu/blackbox.yml
+        content: |
+          modules:
+            http_2xx:
+              prober: http
+              timeout: 5s
+              http:
+                valid_status_codes: []  # Defaults to 2xx
+                method: GET
+            tcp_connect:
+              prober: tcp
+              timeout: 5s
+
+    # --- PROMETHEUS CONFIG (Updated for Blackbox) ---
+    - name: Generate Prometheus Config
+      copy:
+        dest: /home/ubuntu/prometheus.yml
+        content: |
+          global:
+            scrape_interval: 15s
+          scrape_configs:
+            - job_name: 'node_exporter'
+              static_configs:
+                - targets:
+                  - '{{ frontend_ip }}:9100'
+                  - '{{ backend_ip }}:9100'
+                  - '{{ db_ip }}:9100'
+                  - '{{ bastion_ip }}:9100'
+
+            # --- NEW: HTTP Uptime Checks ---
+            - job_name: 'blackbox_http'
+              metrics_path: /probe
+              params:
+                module: [http_2xx]
+              static_configs:
+                - targets:
+                  - http://{{ frontend_ip }}:80   # Check Frontend
+                  - http://{{ backend_ip }}:5000  # Check Backend API
+              relabel_configs:
+                - source_labels: [__address__]
+                  target_label: __param_target
+                - source_labels: [__param_target]
+                  target_label: instance
+                - target_label: __address__
+                  replacement: {{ bastion_ip }}:9115 
+
+            # --- NEW: TCP/DB Uptime Checks ---
+            - job_name: 'blackbox_tcp'
+              metrics_path: /probe
+              params:
+                module: [tcp_connect]
+              static_configs:
+                - targets:
+                  - {{ db_ip }}:27017             # Check MongoDB Port
+              relabel_configs:
+                - source_labels: [__address__]
+                  target_label: __param_target
+                - source_labels: [__param_target]
+                  target_label: instance
+                - target_label: __address__
+                  replacement: {{ bastion_ip }}:9115
+
+    # --- GRAFANA CONFIGS ---
+    - name: Generate Datasource Config
+      template:
+        src: ../monitoring/grafana/provisioning/datasources/datasources.yml.j2
+        dest: /home/ubuntu/grafana/provisioning/datasources/datasources.yml
+
+    - name: Upload Electromart Dashboard JSON
+      copy:
+        src: ../monitoring/grafana/provisioning/dashboards/electromart_dashboard.json
+        dest: /home/ubuntu/grafana/dashboards_json/electromart_dashboard.json
+
+    - name: Configure Dashboard Provider
+      copy:
+        src: ../monitoring/grafana/provisioning/dashboards/dashboard.yml
+        dest: /home/ubuntu/grafana/provisioning/dashboards/dashboard.yml
+
+    # --- START CONTAINERS ---
+    - name: Start Blackbox Exporter
+      docker_container:
+        name: blackbox_exporter
+        image: prom/blackbox-exporter:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "9115:9115"
+        volumes:
+          - /home/ubuntu/blackbox.yml:/config/blackbox.yml
+
+    - name: Start Prometheus
+      docker_container:
+        name: prometheus
+        image: prom/prometheus:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "9090:9090"
+        volumes:
+          - /home/ubuntu/prometheus.yml:/etc/prometheus/prometheus.yml
+
+    - name: Start Grafana
+      docker_container:
+        name: grafana
+        image: grafana/grafana:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "3000:3000"
+        volumes:
+          - /home/ubuntu/grafana/provisioning:/etc/grafana/provisioning
+          - /home/ubuntu/grafana/dashboards_json:/var/lib/grafana/dashboards
