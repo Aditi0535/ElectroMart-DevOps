@@ -4,13 +4,12 @@
 
 ![AWS](https://img.shields.io/badge/AWS-Architecture-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white)
 ![Terraform](https://img.shields.io/badge/Terraform-IaC-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)
+![Ansible](https://img.shields.io/badge/Ansible-Config%20Mgmt-EE0000?style=for-the-badge&logo=ansible&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Containerization-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![Security](https://img.shields.io/badge/Trivy%20%26%20Hadolint-DevSecOps-00C7B7?style=for-the-badge&logo=security&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-CI%2FCD-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
 
 *A production-grade migration of a monolithic e-commerce application to a secure, self-healing 3-Tier Architecture on AWS.*
-
-[**View Live Deployment**](http://YOUR_EC2_PUBLIC_IP) | [**View Project Report**](./docs/Project_Report.pdf)
 
 </div>
 
@@ -111,7 +110,8 @@ ElectroMart-DevOps/
 Security is shifted left, running on every commit before deployment occurs.
 
 * **Hadolint (Dockerfile Linter):** Analyzes `Dockerfile` syntax to enforce best practices (e.g., ensuring specific versions are pinned, preventing root user execution).
-* **Trivy (Vulnerability Scanner):** * **IaC Scanning:** Scans Terraform files for misconfigurations (e.g., open security groups).
+* **Trivy (Vulnerability Scanner):**
+* **IaC Scanning:** Scans Terraform files for misconfigurations (e.g., open security groups).
 * **Image Scanning:** Scans the built Docker images for CVEs (Common Vulnerabilities and Exposures) before pushing them to ECR.
 
 
