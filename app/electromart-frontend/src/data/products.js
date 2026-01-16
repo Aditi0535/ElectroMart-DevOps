@@ -5,7 +5,7 @@
 export const products = [
   {
     id: 'p1',
-    name: 'Samsung 65" QLED 4K TV',
+    name: 'Samsung 55" OLED 4K TV',
     category: 'TVs',
     price: 1499.99,
     imageUrl: 'https://placehold.co/600x400/333/fff?text=Samsung+TV',
@@ -15,7 +15,7 @@ export const products = [
   },
   {
     id: 'p2',
-    name: 'Dell XPS 15 Laptop',
+    name: 'Lenovo Legion 5 Pro',
     category: 'Laptops',
     price: 1899.99,
     imageUrl: 'https://placehold.co/600x400/333/fff?text=Dell+XPS+15',

@@ -10,7 +10,12 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-PROJECT_ROOT=$(pwd)/..
+# ------------------------------------------------------------------
+# ROBUST PATH CONFIGURATION
+# ------------------------------------------------------------------
+# Gets the directory where THIS script is located, regardless of where you run it from
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PROJECT_ROOT="${SCRIPT_DIR}/.."
 TF_DIR="${PROJECT_ROOT}/terraform"
 ANSIBLE_DIR="${PROJECT_ROOT}/ansible"
 APP_DIR="${PROJECT_ROOT}/app"
@@ -25,7 +30,7 @@ cd $TF_DIR
 terraform init
 terraform apply -auto-approve
 
-# Extract Outputs for later use
+# Extract Outputs
 echo -e "${YELLOW}📝 Capturing Infrastructure Details...${NC}"
 BASTION_IP=$(terraform output -raw BASTION_IP)
 FRONTEND_IP=$(terraform output -raw WEB_PRIVATE_IP)
@@ -38,12 +43,12 @@ REGION="ap-south-1"
 
 echo "   - Bastion: $BASTION_IP"
 echo "   - Web App: $WEB_PUBLIC_IP"
+echo "   - Backend Repo: $ECR_BACKEND"
 
 # ====================================================
 # PHASE 2: GENERATE ANSIBLE INVENTORY
 # ====================================================
-echo -e "\n${BLUE}Gx  [2/4] Generating Dynamic Inventory...${NC}"
-# We automatically write the IPs to inventory.ini
+echo -e "\n${BLUE}📝 [2/4] Generating Dynamic Inventory...${NC}"
 cat > ${ANSIBLE_DIR}/inventory.ini <<EOF
 [bastion]
 ${BASTION_IP}
@@ -78,8 +83,12 @@ echo -e "${GREEN}✅ Inventory updated successfully!${NC}"
 # ====================================================
 echo -e "\n${BLUE}🐳 [3/4] Building & Pushing Docker Images...${NC}"
 
+# Extract just the Registry URL (remove /home-app-backend)
+ECR_REGISTRY=$(echo "$ECR_BACKEND" | cut -d'/' -f1)
+
 # Login to ECR
-aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ECR_BACKEND
+echo "   -> Logging into ECR: $ECR_REGISTRY"
+aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
 
 # Build & Push Backend
 echo "   -> Processing Backend..."
@@ -104,17 +113,14 @@ echo -e "\n${BLUE}⚙️  [4/4] Configuring Servers & Deploying App...${NC}"
 cd $ANSIBLE_DIR
 
 # ------------------------------------------------------------------
-# SMART WAIT: Check for SSH connectivity before running playbooks
+# SMART WAIT: Check for SSH connectivity
 # ------------------------------------------------------------------
 echo -e "${YELLOW}⏳ Waiting for all servers to become reachable via SSH...${NC}"
-echo "   (This may take 1-2 minutes while servers initialize)"
-
 RETRIES=30
 DELAY=10
 SUCCESS=false
 
 for ((i=1; i<=RETRIES; i++)); do
-    # Try to ping all hosts defined in inventory
     if ansible -i inventory.ini all -m ping > /dev/null 2>&1; then
         echo -e "${GREEN}✅ All servers are online and reachable!${NC}"
         SUCCESS=true
@@ -126,14 +132,11 @@ for ((i=1; i<=RETRIES; i++)); do
 done
 
 if [ "$SUCCESS" = false ]; then
-    echo -e "${RED}❌ Timeout: Servers did not become reachable in time.${NC}"
-    echo "   Please check your Security Groups or SSH Key configuration."
+    echo -e "${RED}❌ Timeout: Servers did not become reachable.${NC}"
     exit 1
 fi
 
-# ------------------------------------------------------------------
-# Run Playbooks (Now guaranteed to connect)
-# ------------------------------------------------------------------
+# Run Playbooks
 echo "   -> Installing Docker..."
 ansible-playbook -i inventory.ini install_docker.yaml
 
@@ -151,13 +154,12 @@ echo -e "\n${BLUE}🔄 [5/5] Syncing Inventory to GitHub...${NC}"
 cd $PROJECT_ROOT
 git add ansible/inventory.ini terraform/terraform.tfvars
 
-# Check if there are changes to commit
 if git diff-index --quiet HEAD --; then
     echo "   No changes to inventory. Skipping push."
 else
     git commit -m "Auto-deploy: Updated Infra IPs & Config"
     git push origin main
-    echo -e "${GREEN}✅ Inventory pushed to GitHub. CI/CD pipeline triggered!${NC}"
+    echo -e "${GREEN}✅ Inventory pushed to GitHub.${NC}"
 fi
 
 # ====================================================
