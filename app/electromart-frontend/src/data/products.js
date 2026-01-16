@@ -5,7 +5,7 @@
 export const products = [
   {
     id: 'p1',
-    name: 'Samsung 55" OLED 4K TV',
+    name: 'Sony Bravia 55" OLED 4K TV',
     category: 'TVs',
     price: 1499.99,
     imageUrl: 'https://placehold.co/600x400/333/fff?text=Samsung+TV',
@@ -15,7 +15,7 @@ export const products = [
   },
   {
     id: 'p2',
-    name: 'Lenovo Legion 5 Pro',
+    name: 'Lenovo ThinkPad X1 Carbon Gen 11',
     category: 'Laptops',
     price: 1899.99,
     imageUrl: 'https://placehold.co/600x400/333/fff?text=Dell+XPS+15',
