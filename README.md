@@ -205,7 +205,7 @@ Then visit: `http://localhost:3000`
 
 [![GitHub](https://img.shields.io/badge/GitHub-Aditi0535-181717?style=for-the-badge&logo=github)](https://github.com/Aditi0535)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/aditi-kharate-99856b225/)
-[![Email](https://img.shields.io/badge/Email-Contact_Me-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:adikharate23@gmail.com)
+[![Email](https://img.shields.io/badge/Email-Contact_Me-D14836?style=for-the-badge&logo=gmail&logoColor=white)](https://mail.google.com/mail/?view=cm&fs=1&to=adikharate23@gmail.com)
 
 *"Passionate about bridging the gap between development and operations through automation."*
 
