@@ -152,7 +152,7 @@ You can replicate this entire infrastructure in minutes.
 ### Step 1: Clone & Initialize
 
 ```bash
-git clone [https://github.com/Aditi0535/ElectroMart-DevOps.git](https://github.com/Aditi0535/ElectroMart-DevOps.git)
+git clone https://github.com/Aditi0535/ElectroMart-DevOps.git
 cd ElectroMart-DevOps
 
 ```
