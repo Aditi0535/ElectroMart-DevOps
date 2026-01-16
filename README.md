@@ -4,8 +4,8 @@
 
 ![AWS](https://img.shields.io/badge/AWS-Architecture-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white)
 ![Terraform](https://img.shields.io/badge/Terraform-IaC-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)
-![Ansible](https://img.shields.io/badge/Ansible-Config%20Mgmt-EE0000?style=for-the-badge&logo=ansible&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Containerization-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Security](https://img.shields.io/badge/Trivy%20%26%20Hadolint-DevSecOps-00C7B7?style=for-the-badge&logo=security&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-CI%2FCD-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
 
 *A production-grade migration of a monolithic e-commerce application to a secure, self-healing 3-Tier Architecture on AWS.*
@@ -20,7 +20,7 @@
 
 **ElectroMart** is a full-stack MERN (MongoDB, Express, React, Node) application originally hosted on a legacy, insecure Azure environment.
 
-This project documents the **complete migration** of the application to **Amazon Web Services (AWS)**. The goal was to eliminate manual "ClickOps," secure the exposed database, and implement a fully automated CI/CD pipeline. The new infrastructure utilizes a **3-Tier VPC Architecture** managed entirely via code (IaC).
+This project documents the **complete migration** of the application to **Amazon Web Services (AWS)**. The goal was to eliminate manual "ClickOps," secure the exposed database, and implement a fully automated **DevSecOps** pipeline. The new infrastructure utilizes a **3-Tier VPC Architecture** managed entirely via code (IaC) and secured with automated scanning tools.
 
 ---
 
@@ -74,6 +74,14 @@ ElectroMart-DevOps/
 │   ├── playbooks/            # Configuration logic for Web, App, and DB servers
 │   └── roles/                # Reusable roles (docker_install, monitoring, etc.)
 │
+├── docker/                   # Container Configuration
+│   ├── backend/
+│   │   ├── Dockerfile        # Multi-stage build for Node.js API
+│   │   └── .dockerignore
+│   └── frontend/
+│       ├── Dockerfile        # Multi-stage build for React + Nginx
+│       └── nginx.conf        # Reverse Proxy Configuration
+│
 ├── scripts/
 │   └── deploy.sh             # Master Orchestrator: Links Terraform & Ansible
 │
@@ -96,13 +104,23 @@ ElectroMart-DevOps/
 
 ---
 
-## 🚀 Key Features
+## 🚀 Key Features & Implementation
 
-### 1. Zero-Touch Infrastructure (Terraform)
+### 1. DevSecOps Integration (Trivy & Hadolint)
+
+Security is shifted left, running on every commit before deployment occurs.
+
+* **Hadolint (Dockerfile Linter):** Analyzes `Dockerfile` syntax to enforce best practices (e.g., ensuring specific versions are pinned, preventing root user execution).
+* **Trivy (Vulnerability Scanner):** * **IaC Scanning:** Scans Terraform files for misconfigurations (e.g., open security groups).
+* **Image Scanning:** Scans the built Docker images for CVEs (Common Vulnerabilities and Exposures) before pushing them to ECR.
+
+
+
+### 2. Zero-Touch Infrastructure (Terraform)
 
 We moved away from a single monolithic configuration file. The infrastructure is split into dedicated modules (`networking`, `security`, `compute`), making it reusable for Staging and Production environments.
 
-### 2. "Self-Healing" Automation Logic
+### 3. "Self-Healing" Automation Logic
 
 A common challenge in cloud automation is the **SSH Race Condition** (Ansible trying to connect before the server is ready).
 
@@ -111,19 +129,13 @@ A common challenge in cloud automation is the **SSH Race Condition** (Ansible tr
 * It **waits** for a successful SSH handshake before triggering Ansible.
 * This ensures a **100% success rate** for deployments without manual intervention.
 
-### 3. Dynamic Inventory Management
+### 4. Dynamic Inventory Management
 
 Since AWS IP addresses change on every deployment, hardcoding IPs is impossible.
 
 * The automation script captures Terraform outputs (Public & Private IPs).
 * It automatically generates a fresh `inventory.ini` file.
 * It commits this new inventory back to GitHub, ensuring the **CI/CD pipeline** always knows where to deploy code.
-
-### 4. Security First (DevSecOps)
-
-* **Network Isolation:** Database and Backend are in private subnets with **no public IPs**.
-* **Least Privilege:** Security groups strictly limit traffic (e.g., DB only accepts traffic from Backend on port 27017).
-* **Secret Injection:** No credentials are stored in code. Database URIs and Keys are injected via GitHub Actions Secrets.
 
 ---
 
@@ -157,10 +169,11 @@ chmod +x scripts/deploy.sh
 
 **What happens next?**
 
-1. Terraform creates the VPC, 4 EC2 instances, and Security Groups.
-2. The script waits for the "Bastion" and "Web" servers to become reachable.
-3. Ansible connects via the Bastion host to configure the Private servers.
-4. Docker containers are pulled from ECR and started.
+1. **Security Check:** Hadolint and Trivy scan the code. If vulnerabilities are found, the script stops.
+2. **Provision:** Terraform creates the VPC, 4 EC2 instances, and Security Groups.
+3. **Wait:** The script waits for the "Bastion" and "Web" servers to become reachable.
+4. **Configure:** Ansible connects via the Bastion host to configure the Private servers.
+5. **Deploy:** Docker containers are pulled from ECR and started.
 
 ---
 
@@ -194,5 +207,3 @@ Then visit: `http://localhost:3000`
 ## 📄 License
 
 Distributed under the MIT License.
-
-```
